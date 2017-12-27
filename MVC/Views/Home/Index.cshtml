@@ -1,0 +1,266 @@
+﻿ 
+@{
+    ViewBag.Title = "Home Page";
+}
+@*<link href="~/Content/popup.css" rel="stylesheet" />*@
+<h1>Quan ly sinh vien</h1>
+ 
+<div class="row">
+    <div class="col-sm-6">
+        <table id="studentTable"
+               class="table table-bordered
+                 table-condensed table-striped">
+            <thead>
+                <tr>
+                    <th>Edit</th>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th>GradeId </th>
+                    <th>Delete</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+</div>
+<hr />
+ 
+<div class="form-group">
+    <label for="studentid">Student Id </label>
+    <input type="text" id="studentid" class="form-control" />
+</div>
+
+<div class="form-group">
+    <label for="studentname">Student Name</label>
+    <input type="text" id="studentname" class="form-control" />
+</div>
+
+<div class="form-group">
+    <label for="url">Class</label>
+    <input type="text" id="gradeid" class="form-control" />
+</div>
+<div class="row">
+    <div class="col-xs-12">
+        <button type="button" id="updateButton"
+                class="btn btn-primary"
+                onclick="updateClick();">
+            Add
+        </button>
+        <button type="button" id="addButton" class="btn btn-primary" onclick="addClick();">
+            Clear Form
+        </button>
+    </div>
+</div>
+
+<input type="hidden" id="studentid" value="0" />
+
+ 
+@section Scripts {
+    <script>
+
+        var Student = {
+            Id: "",
+            Name: "",
+            GradeId: "" 
+        }
+
+        $(document).ready(function () {
+            studentList();
+        });
+        // Handle click event on Update button
+        function updateClick() {
+            // Build student object from inputs
+            Student = new Object();
+            Student.Name = $("#studentname").val();
+            Student.Id = $("#studentid").val();
+            Student.GradeId = $("#gradeid").val();
+            if ($("#updateButton").text().trim() == "Add") {
+                studentAdd(Student);
+            }
+            else {
+                studentUpdate(Student);
+            }
+        }
+        // Handle click event on Add button
+        function addClick() {
+            formClear();
+        }
+        // Handle delete  
+        function studentDelete(ctl) {
+            var id = $(ctl).data("id");
+
+            $.ajax({
+                url: "/api/Students/" + id,
+                type: 'DELETE',
+                success: function (student) {
+                    $(ctl).parents("tr").remove();
+                },
+                error: function (request, message, error) {
+                    handleException(request, message, error);
+                }
+            });
+        }
+        // Handle list student
+        function studentList() {
+            // Call Web API to get a list of student
+        
+            $.ajax({
+                url: '/api/students/',
+                type: 'GET',
+                dataType: 'json',
+                success: function (students) {
+                  
+                    studentListSuccess(students);
+                },
+                error: function (request, message, error) {
+                    handleException(request, message, error);
+                }
+            });
+        }
+
+        function studentListSuccess(students) {
+            // Iterate over the collection of data
+            $.each(students, function (index, students) {
+                // Add a row to the student table
+                studentAddRow(students);
+            });
+        }
+
+        function studentAddRow(student) {
+            // Check if <tbody> tag exists, add one if not
+            if ($("#studentTable tbody").length == 0) {
+                $("#studentTable").append("<tbody></tbody>");
+            }
+
+            // Append row to <table>
+            $("#studentTable tbody").append(
+              studentBuildTableRow(student));
+        }
+
+        function studentBuildTableRow(student) {
+            var ret =
+              "<tr>" +
+              "<td>" +
+                    "<button type='button' " +
+                    "onclick='studentGet(this);' " +
+                    "class='btn btn-default' " +
+                    "data-id='" + student.Id + "'>" +
+                    "<span class='glyphicon glyphicon-edit' /> </button>" +
+               "</td >" +
+               "<td>" + student.Id + "</td>" +
+               "<td>" + student.Name + "</td>" +
+               "<td>" + student.GradeId + "</td>" +
+               "<td>" +
+                    "<button type='button' " +
+                    "onclick='studentDelete(this);' " +
+                    "class='btn btn-default' " +
+                    "data-id='" + student.Id + "'>" +
+                    "<span class='glyphicon glyphicon-remove' />  </button>" +
+               "</td>" +
+               "</tr>";
+            return ret;
+        }
+
+        function handleException(request, message, error) {
+            var msg = "";
+            msg += "Code: " + request.status + "\n";
+            msg += "Text: " + request.statusText + "\n";
+            if (request.responseJSON != null) {
+                msg += "Message" +
+                    request.responseJSON.Message + "\n";
+            }
+            alert(msg);
+        }
+
+        function studentAdd(student) {
+            $.ajax({
+                url: "/api/Students",
+                type: 'POST',
+                contentType:
+                   "application/json;charset=utf-8",
+                data: JSON.stringify(student),
+                success: function (student) {
+                    studentAddSuccess(student);
+                },
+                error: function (request, message, error) {
+                    handleException(request, message, error);
+                }
+            });
+        }
+        function studentAddSuccess(student) {
+            studentAddRow(student);
+            formClear();
+        }
+        function formClear() {
+            $("#studentid").val("");
+            $("#studentname").val("");
+            $("#gradeid").val("");
+            // Change Update Button Text
+            $("#updateButton").text("Add");
+        }
+
+        function studentUpdate(student) {
+            var newStudent = student;
+            $.ajax({
+                url: "/api/students/"+student.Id,
+                type: 'PUT',
+                contentType:
+                   "application/json;charset=utf-8",
+                //data: JSON.stringify({ id: student.Id, student: student }),
+                data: JSON.stringify(newStudent),
+                success: function (newStudent) {
+                    studentUpdateSuccess(student);
+                },
+                error: function (request, message, error) { 
+                    handleException(request, message, error);
+                }
+            });
+        }
+        function studentUpdateSuccess(student) {
+            studentUpdateInTable(student);
+             
+        }
+        function studentUpdateInTable(student) {
+            // Find student in <table>
+            debugger
+            var row = $("#studentTable button[data-id='" +
+               student.Id + "']").parents("tr")[0];
+            // Add changed student to table
+            $(row).after(studentBuildTableRow(student));
+            // Remove original student
+            $(row).remove();
+            formClear(); // Clear form fields 
+        }
+
+        function studentGet(ctl) {
+            // Get student id from data- attribute
+            var id = $(ctl).data("id");
+
+            // Store student id in hidden field
+            $("#studentid").val(id);
+
+            // Call Web API to get a list of student
+            $.ajax({
+                url: "/api/students/" + id,
+                type: 'GET',
+                dataType: 'json',
+                success: function (student) {
+                    studentToFields(student);
+
+                    // Change Update Button Text
+                    $("#updateButton").text("Update");
+
+                  
+                },
+                error: function (request, message, error) {
+                    handleException(request, message, error);
+                }
+            });
+        }
+        function studentToFields(student) {
+            $("#studentid").val(student.Id);
+            $("#studentname").val(student.Name);
+            $("#gradeid").val(student.GradeId);
+        }
+         
+    </script> 
+}
